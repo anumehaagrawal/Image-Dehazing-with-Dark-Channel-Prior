@@ -43,8 +43,7 @@ def getLight(srcImage, darkImage, cut):
     for y in xrange(size[1]):
       light.append(darkImage.getpixel((x, y)))
 
-  light.sort()
-  light.reverse()
+  light.sort(reverse = True)
   threshold = light[int(cut * len(light))]
   atmosphere = {}
 
@@ -68,13 +67,17 @@ def getTransmission(input_img, light, omiga):
       temp.append(min(input_img.getpixel((y, x))) / float(min(light)))
 
     output.append(temp)
-
+    mini = 999
+    for i in output:
+      for num in i:
+        if mini>num:
+          mini = num
   transmission = []
 
   for x in xrange(size[1]):
     temp = []
     for y in xrange(size[0]):
-      temp.append(1 - omiga * minimizeFilter(output, (x, y), (10, 10)))
+      temp.append(1 - omiga * mini )
 
     transmission.append(temp)
 
@@ -97,12 +100,11 @@ def getRadiance(input_img, transmission, light, t0):
 
   return output
 
-def ensure(n):
+def check_range(n):
   if n < 0:
-    n = 0
-
+    return 0
   if n > 255:
-    n = 255
+    return 255
 
   return int(n)
 
@@ -115,7 +117,7 @@ if __name__ == '__main__':
 
   light = getLight(image, dark, 0.001)
 
-  transmission = getTransmission(image, light, 0.95)
+  transmission = getTransmission(image, light, 0.96)
 
   tranImage = Image.new('L', image.size)
   grayImage = image.convert('L')
@@ -123,20 +125,17 @@ if __name__ == '__main__':
   for x in xrange(image.size[0]):
     for y in xrange(image.size[1]):
       tranImage.putpixel((x, y), int(transmission[y][x] * 255))
-  # tranImage.save('transimage.png')
-  # grayImage.save('grayimage.png')
   guided = guidedFilter(grayImage, tranImage, 25, 0.001)
-
   guidedImage = Image.new('L', image.size)
 
   for x in xrange(image.size[0]):
     for y in xrange(image.size[1]):
-      guidedImage.putpixel((x, y), ensure(guided[y][x]))
+      guidedImage.putpixel((x, y), check_range(guided[y][x]))
       guided[y][x] /= 255.0
 
-  #guidedImage.show()
+  guidedImage.show()
   # guidedImage.save('3_guided.png')
 
-  output = getRadiance(image, guided, light, 0.8)
+  output = getRadiance(image, guided, light, 0.85)
 
 output.save('3_haze.png')

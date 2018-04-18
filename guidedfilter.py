@@ -1,4 +1,5 @@
 
+from PIL import ImageFilter
 from PIL import Image
 
 def filter2d(input_img, filter, frame):
@@ -28,6 +29,88 @@ def minimizeFilter(input_img, point, size):
         l.append(input_img[i][j])
 
   return min(l)
+
+def convertImageToMatrix(image):
+  size = image.size
+  out = []
+
+  for x in xrange(size[1]):
+    temp = []
+    for y in xrange(size[0]):
+      temp.append(image.getpixel((y, x)))
+
+    out.append(temp)
+
+  return out
+
+def boxFilter(im, radius):
+  """box filter for the image of the radius"""
+  height, width = len(im), len(im[0])
+
+  imDst = []
+  imCum = []
+
+  for x in xrange(height):
+    imDst.append([0.0] * width)
+    imCum.append([0.0] * width)
+
+  #cumulative sum over Y axis
+  for i in xrange(width):
+    for j in xrange(height):
+      if j == 0:
+        imCum[j][i] = im[j][i]
+      else:
+        imCum[j][i] = im[j][i] + imCum[j - 1][i]
+
+  #difference over Y axis
+  for j in xrange(radius + 1):
+    for i in xrange(width):
+      imDst[j][i] = imCum[j + radius][i]
+
+  for j in xrange(radius + 1, height - radius):
+    for i in xrange(width):
+      imDst[j][i] = imCum[j + radius][i] - imCum[j - radius - 1][i]
+
+  for j in xrange(height - radius, height):
+    for i in xrange(width):
+      imDst[j][i] = imCum[height - 1][i] - imCum[j - radius - 1][i]
+
+  #cumulative sum over X axis
+  for j in xrange(height):
+    for i in xrange(width):
+      if i == 0:
+        imCum[j][i] = imDst[j][i]
+      else:
+        imCum[j][i] = imDst[j][i] + imCum[j][i - 1]
+
+  #difference over X axis
+  for j in xrange(height):
+    for i in xrange(radius + 1):
+      imDst[j][i] = imCum[j][i + radius]
+
+  for j in xrange(height):
+    for i in xrange(radius + 1, width - radius):
+      imDst[j][i] = imCum[j][i + radius] - imCum[j][i - radius - 1]
+
+  for j in xrange(height):
+    for i in xrange(width - radius, width):
+      imDst[j][i] = imCum[j][width - 1] - imCum[j][i - radius - 1]
+
+  return imDst
+
+def dot(matrix1, matrix2, operation):
+  """dot operation for the matrix1 and matrix2"""
+  out = []
+  size = len(matrix1), len(matrix1[0])
+
+  for x in xrange(size[0]):
+    temp = []
+    for y in xrange(size[1]):
+      temp.append(operation(matrix1[x][y], matrix2[x][y]))
+
+    out.append(temp)
+
+  return out
 
 def guidedFilter(srcImage, guidedImage, radius, epsilon):
   """guided filter for the image src image must be gray image guided image must be gray image """

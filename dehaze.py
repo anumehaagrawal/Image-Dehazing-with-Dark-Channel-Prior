@@ -9,12 +9,11 @@ class Channel_value:
     intensity = -1.0
 
 
-def find_intensity_of_atmospheric_light(img, gray):
-    top_num = int(img.shape[0] * img.shape[1] * 0.001)
+def atmospheric_light(img, gray):
+    top = int(img.shape[0] * img.shape[1] * 0.001)
     print(img.shape[0],img.shape[0])
-    toplist = [Channel_value()] * top_num
-    print(intensity)
-    dark_channel = find_dark_channel(img)
+    toplist = [Channel_value()] * top
+    dark_channel = darkchannel(img)
     print(dark_channel)
     for y in range(img.shape[0]):
         for x in range(img.shape[1]):
@@ -37,7 +36,7 @@ def find_intensity_of_atmospheric_light(img, gray):
     return max_channel.intensity
 
 
-def find_dark_channel(img):
+def darkchannel(img):
     # This is the lightest of the three channels R,G,B to give the pixel with least intensity . This is generally around 0.
     return np.unravel_index(np.argmin(img), img.shape)[2]
 
@@ -46,27 +45,28 @@ def clamp(minimum, x, maximum):
     return max(minimum, min(x, maximum))
 
 
-def dehaze(img, light_intensity, windowSize, t0, w):
+def dehaze(img, light_intensity, windowSize, t0, w ,roh):
+    # Calculating the size of image
     size = (img.shape[0], img.shape[1])
-
-    outimg = np.zeros(img.shape, img.dtype)
-
+    # Designing layout of the output image
+    outputimg = np.zeros(img.shape, img.dtype)
+    # calculating transmission map
     for y in range(size[0]):
         for x in range(size[1]):
             x_low = max(x-(windowSize//2), 0)
             y_low = max(y-(windowSize//2), 0)
             x_high = min(x+(windowSize//2), size[1])
             y_high = min(y+(windowSize//2), size[0])
-
             sliceimg = img[y_low:y_high, x_low:x_high]
-
-            dark_channel = find_dark_channel(sliceimg)
-            t = 1.0 - (w * img.item(y, x, dark_channel) / light_intensity)
-
-            outimg.itemset((y,x,0), clamp(0, ((img.item(y,x,0) - light_intensity) / max(t, t0) + light_intensity), 255))
-            outimg.itemset((y,x,1), clamp(0, ((img.item(y,x,1) - light_intensity) / max(t, t0) + light_intensity), 255))
-            outimg.itemset((y,x,2), clamp(0, ((img.item(y,x,2) - light_intensity) / max(t, t0) + light_intensity), 255))
-    return outimg
+            #using the sliding windows  to calculate the corner vertices
+            dark_channel = darkchannel(sliceimg)
+            #This is the transmission value. w will be the weight and roh added will be to avoid unnatural haze
+            t = 1.0 - (w * img.item(y, x, dark_channel) / light_intensity) + roh
+            # Each R,G,B channel needs to be modified
+            outputimg.itemset((y,x,0), clamp(0, ((img.item(y,x,0) - light_intensity) / max(t, t0) + light_intensity), 255))
+            outputimg.itemset((y,x,1), clamp(0, ((img.item(y,x,1) - light_intensity) / max(t, t0) + light_intensity), 255))
+            outputimg.itemset((y,x,2), clamp(0, ((img.item(y,x,2) - light_intensity) / max(t, t0) + light_intensity), 255))
+    return outputimg
 
 
 def main():
@@ -74,10 +74,11 @@ def main():
     img = cv2.imread(imageName)
     cv2.namedWindow("Dehazed image")
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    light_intensity = find_intensity_of_atmospheric_light(img, gray)
+    light_intensity = atmospheric_light(img, gray)
     w = 0.95
     t0 = 0.50
-    outimg = dehaze(img, light_intensity, 20, t0, w)
+    roh = 0.012
+    outimg = dehaze(img, light_intensity, 20, t0, w , roh)
     name = imageName+'output'+'.jpg'
     cv2.imwrite(name, outimg)
 
