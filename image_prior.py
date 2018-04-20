@@ -13,7 +13,7 @@ outputImage <- (I - A)/T + A
 from PIL import Image
 from guidedfilter import *
 
-def getDark(input_img, filter, frame):
+def DarkChannel(input_img, filter, frame):
   """get dark image from the input image"""
   size = input_img.size
   output = []
@@ -34,7 +34,7 @@ def getDark(input_img, filter, frame):
 
   return output_img
 
-def getLight(srcImage, darkImage, cut):
+def AtmosLight(srcImage, darkImage, cut):
   """get atmospheric light from the picture"""
   size = darkImage.size
   light = []
@@ -56,7 +56,7 @@ def getLight(srcImage, darkImage, cut):
 
   return srcImage.getpixel(pos)
 
-def getTransmission(input_img, light, omiga):
+def TransmissionMap(input_img, light, omiga):
   """get transmission from the picture"""
   size = input_img.size
   output = []
@@ -111,13 +111,13 @@ def check_range(n):
 if __name__ == '__main__':
   image = Image.open('14.jpg')
   image = image.convert('RGB')
-  dark = getDark(image, minimizeFilter, (10, 10))
+  dark = DarkChannel(image, minimizeFilter, (10, 10))
 
   # dark.save('3_dark.png')
 
-  light = getLight(image, dark, 0.001)
+  light = AtmosLight(image, dark, 0.001)
 
-  transmission = getTransmission(image, light, 0.96)
+  transmission = TransmissionMap(image, light, 0.96)
 
   tranImage = Image.new('L', image.size)
   grayImage = image.convert('L')
@@ -138,4 +138,4 @@ if __name__ == '__main__':
 
   output = getRadiance(image, guided, light, 0.85)
 
-output.save('3_haze.png')
+output.save('tryoutput.jpg')
